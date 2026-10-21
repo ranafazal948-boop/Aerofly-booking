@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AeroFly UK - Domestic Flights & Partner Hub</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<script>
+tailwind.config = {
+darkMode: 'class',
+theme: {
+extend: {
+colors: {
+brand: {
+50: '#f0df4',
+100: '#dcfce7',
+500: '#eab308',
+600: '#ca8a04',
+700: '#a16207',
+}
+}
+}
+}
+}
+</script>
+</head>
+<body class="bg-slate-950 text-slate-100 font-sans antialiased min-h-screen">
+<div id="root"></div>
+<script type="module" src="/src/main.tsx"></script>
+</body>
+</html>
+
+export interface Airport {
+code: string;
+name: string;
+city: string;
+country: string;
+isBusy: boolean;
+}
+
+export interface Flight {
+id: string;
+airline: string;
+flightNumber: string;
+origin: Airport;
+destination: Airport;
+departureTime: string;
+arrivalTime: string;
+duration: string;
+price: number;
+availableSeats: number;
+aircraft: string;
+}
+
+export interface BookingDetails {
+flight: Flight;
+passengerName: string;
+passengerEmail: string;
+passportNumber: string;
+pnr: string;
+seatNumber: string;
+baggage20kg: number;
+baggage32kg: number;
+baggageSports: number;
+totalPrice: number;
+commissionEarned: number;
+bookingDate: string;
+}
+
+export interface CommissionConfig {
+markupType: 'fixed' | 'percentage';
+markupValue: number;
+bankName: string;
+accountHolder: string;
+sortCode: string;
+accountNumber: string;
+masterPin: string;
+travelpayoutsKey: string;
+skyscannerKey: string;
+}
+
+import { Airport } from '../types/flight';
+
+export const ukAirports: Airport[] = [
+{ code: 'LHR', name: 'London Heathrow', city: 'London', country: 'UK', isBusy: true },
+{ code: 'LGW', name: 'London Gatwick', city: 'London', country: 'UK', isBusy: true },
+{ code: 'EDI', name: 'Edinburgh Airport', city: 'Edinburgh', country: 'UK', isBusy: true },
+{ code: 'MAN', name: 'Manchester Airport', city: 'Manchester', country: 'UK', isBusy: true },
+{ code: 'GLA', name: 'Glasgow International', city: 'Glasgow', country: 'UK', isBusy: true },
+{ code: 'BHX', name: 'Birmingham Airport', city: 'Birmingham', country: 'UK', isBusy: true },
+{ code: 'BHD', name: 'Belfast City Airport', city: 'Belfast', country: 'UK', isBusy: true },
+{ code: 'ABZ', name: 'Aberdeen Airport', city: 'Aberdeen', country: 'UK', isBusy: false },
+{ code: 'NCL', name: 'Newcastle International', city: 'Newcastle', country: 'UK', isBusy: false },
+{ code: 'BRS', name: 'Bristol Airport', city: 'Bristol', country: 'UK', isBusy: false },
+];
+
+import { CommissionConfig, BookingDetails } from '../types/flight';
+
+const DEFAULT_CONFIG: CommissionConfig = {
+markupType: 'fixed',
+markupValue: 15,
+bankName: 'Barclays UK',
+accountHolder: 'AeroFly Partner',
+sortCode: '20-45-78',
+accountNumber: '83920145',
+masterPin: '7860',
+travelpayoutsKey: 'MARKER_89214',
+skyscannerKey: 'SKY_UK_OFFICIAL_LIVE'
+};
+
+export const getCommissionConfig = (): CommissionConfig => {
+const saved = localStorage.getItem('aerofly_commission_config');
+return saved ? JSON.parse(saved) : DEFAULT_CONFIG;
+};
+
+export const saveCommissionConfig = (config: CommissionConfig): void => {
+localStorage.setItem('aerofly_commission_config', JSON.stringify(config));
+};
+
+export const getStoredBookings = (): BookingDetails[] => {
+const saved = localStorage.getItem('aerofly_bookings');
+return saved ? JSON.parse(saved) : [];
+};
+
+export const saveBooking = (booking: BookingDetails): void => {
+const current = getStoredBookings();
+localStorage.setItem('aerofly_bookings', JSON.stringify([...current, booking]));
+};
+
+export const calculateCommission = (basePrice: number, config: CommissionConfig): number => {
+if (config.markupType === 'percentage') {
+return Number(((basePrice * config.markupValue) / 100).toFixed(2));
+}
+return config.markupValue;
+};
+
+import React, { useState } from 'react';
+import Navbar from './components/Navbar';
+import HeroSearch from './components/HeroSearch';
+import FlightResults from './components/FlightResults';
+import BookingModal from './components/BookingModal';
+import BoardingPassModal from './components/BoardingPassModal';
+import OwnerPortalModal from './components/OwnerPortalModal';
+import UkRoutesShowcase from './components/UkRoutesShowcase';
+import Footer from './components/Footer';
+import { Flight, BookingDetails } from './types/flight';
+
+export default function App() {
+const [searchResults, setSearchResults] = useState<Flight[]>([]);
+const [selectedFlight, setSelectedFlight] = useState<Flight | null>(null);
+const [completedBooking, setCompletedBooking] = useState<BookingDetails | null>(null);
+const [isOwnerPortalOpen, setIsOwnerPortalOpen] = useState(false);
+const [hasSearched, setHasSearched] = useState(false);
+
+const handleSearch = (fromCode: string, toCode: string) => {
+setHasSearched(true);
+// Dynamic flight search logic here
+};
+
+return (
+<div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
+<Navbar onOpenOwnerPortal={() => setIsOwnerPortalOpen(true)} />
+
+<main className="flex-grow">
+<HeroSearch onSearch={handleSearch} />
+{hasSearched && (
+<FlightResults
+flights={searchResults}
+onSelectFlight={(flight) => setSelectedFlight(flight)}
+/>
+)}
+<UkRoutesShowcase />
+</main>
+
+{selectedFlight && (
+<BookingModal
+flight={selectedFlight}
+onClose={() => setSelectedFlight(null)}
+onBookingComplete={(booking) => {
+setSelectedFlight(null);
+setCompletedBooking(booking);
+}}
+/>
+)}
+
+{completedBooking && (
+<BoardingPassModal
+booking={completedBooking}
+onClose={() => setCompletedBooking(null)}
+/>
+)}
+
+{isOwnerPortalOpen && (
+<OwnerPortalModal onClose={() => setIsOwnerPortalOpen(false)} />
+)}
+
+<Footer />
+</div>
+);
+}
